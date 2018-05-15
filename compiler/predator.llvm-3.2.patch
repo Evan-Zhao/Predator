@@ -719,9 +719,9 @@ diff -Nur llvm-3.2-source-orig/tools/opt/opt.cpp llvm-3.2-new/tools/opt/opt.cpp
 @@ -0,0 +1,12 @@
 +#!/bin/sh
 +
-+./configure --prefix=/home/tongping/work/llvm/try/llvm-install \
++./configure --prefix=$(pwd)/../build_patch \
 +            --sysconfdir=/etc          \
-+            --libdir=/home/tongping/work/llvm/try/llvm-install/lib/llvm     \
++            --libdir=$(pwd)/../build_patch/lib/llvm     \
 +            --enable-optimized         \
 +            --enable-shared            \
 +            --enable-targets=all       \

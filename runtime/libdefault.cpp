@@ -14,7 +14,7 @@ extern "C" {
   unsigned long textStart, textEnd;
   unsigned long globalStart, globalEnd;
   unsigned long heapStart, heapEnd;
-  #define INITIAL_MALLOC_SIZE 81920
+  #define INITIAL_MALLOC_SIZE 819200
   static char * tempalloced = NULL;
   static int remainning = 0;
   __thread thread_t * current;
@@ -155,6 +155,8 @@ extern "C" {
 
   // Temporary mallocation before initlization has been finished.
   static void * tempmalloc(int size) {
+    if (tempalloced == NULL)
+      initializer();
     void * ptr = NULL;
     if(remainning < size) {
       // complaining. Tried to set to larger
