@@ -68,9 +68,9 @@ extern "C" {
   
 #if 1
   void store_16bytes(unsigned long addr) {
-    pthread_mutex_lock( &mutexStore );
-    stores++;
-    pthread_mutex_unlock( &mutexStore );
+    // pthread_mutex_lock( &mutexStore );
+    // stores++;
+    // pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_WRITE);
     }
@@ -78,9 +78,9 @@ extern "C" {
 
   void store_8bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexStore );
-    stores++;
-    pthread_mutex_unlock( &mutexStore );
+    // pthread_mutex_lock( &mutexStore );
+    // stores++;
+    // pthread_mutex_unlock( &mutexStore );
     //fprintf(stderr, "store_8bytes %lx WWWWWWWWWWWWWWWWWWWWW isMulthreading %d\n", addr, isMultithreading);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_WRITE);
@@ -89,9 +89,9 @@ extern "C" {
   
   void store_4bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexStore );
-    stores++;
-    pthread_mutex_unlock( &mutexStore );
+    // pthread_mutex_lock( &mutexStore );
+    // stores++;
+    // pthread_mutex_unlock( &mutexStore );
     //fprintf(stderr, "store_4bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_WRITE);
@@ -100,9 +100,9 @@ extern "C" {
   
   void store_2bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexStore );
-    stores++;
-    pthread_mutex_unlock( &mutexStore );
+    // pthread_mutex_lock( &mutexStore );
+    // stores++;
+    // pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_WRITE);
     }
@@ -110,9 +110,9 @@ extern "C" {
   
   void store_1bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexStore );
-    stores++;
-    pthread_mutex_unlock( &mutexStore );
+    // pthread_mutex_lock( &mutexStore );
+    // stores++;
+    // pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_WRITE);
     }
@@ -120,9 +120,9 @@ extern "C" {
   
   void load_16bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexLoad );
-    loads++;
-    pthread_mutex_unlock( &mutexLoad );
+    // pthread_mutex_lock( &mutexLoad );
+    // loads++;
+    // pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_READ);
     }
@@ -130,9 +130,9 @@ extern "C" {
   
   void load_8bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexLoad );
-    loads++;
-    pthread_mutex_unlock( &mutexLoad );
+    // pthread_mutex_lock( &mutexLoad );
+    // loads++;
+    // pthread_mutex_unlock( &mutexLoad );
     //fprintf(stderr, "load_8bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_READ);
@@ -141,9 +141,9 @@ extern "C" {
   
   void load_4bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexLoad );
-    loads++;
-    pthread_mutex_unlock( &mutexLoad );
+    // pthread_mutex_lock( &mutexLoad );
+    // loads++;
+    // pthread_mutex_unlock( &mutexLoad );
     //fprintf(stderr, "load_4bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_READ);
@@ -152,9 +152,9 @@ extern "C" {
   
   void load_2bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexLoad );
-    loads++;
-    pthread_mutex_unlock( &mutexLoad );
+    // pthread_mutex_lock( &mutexLoad );
+    // loads++;
+    // pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_READ);
     }
@@ -162,9 +162,9 @@ extern "C" {
   
   void load_1bytes(unsigned long addr) {
     
-    pthread_mutex_lock( &mutexLoad );
-    loads++;
-    pthread_mutex_unlock( &mutexLoad );
+    // pthread_mutex_lock( &mutexLoad );
+    // loads++;
+    // pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_READ);
     }
