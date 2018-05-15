@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#include <pthread.h>
 #include "xthread.h"
 #include "cachetrack.h"
 #include "xrun.h"
@@ -21,6 +22,11 @@ extern "C" {
   __thread bool isBacktrace = false;
   xmemory  & _memory = xmemory::getInstance();
 
+  
+  pthread_mutex_t mutexStore = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t mutexLoad = PTHREAD_MUTEX_INITIALIZER;
+  long long loads=0, stores=0;
+  
   // Exposing these functions to the instrumented programs.
   void allocCacheTrack(unsigned long index)  {
   //  fprintf(stderr, "allocateCacheTrack on index %ld \n", index);
@@ -62,12 +68,19 @@ extern "C" {
   
 #if 1
   void store_16bytes(unsigned long addr) {
+    pthread_mutex_lock( &mutexStore );
+    stores++;
+    pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_WRITE);
     }
   }
 
   void store_8bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexStore );
+    stores++;
+    pthread_mutex_unlock( &mutexStore );
     //fprintf(stderr, "store_8bytes %lx WWWWWWWWWWWWWWWWWWWWW isMulthreading %d\n", addr, isMultithreading);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_WRITE);
@@ -75,6 +88,10 @@ extern "C" {
   }
   
   void store_4bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexStore );
+    stores++;
+    pthread_mutex_unlock( &mutexStore );
     //fprintf(stderr, "store_4bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_WRITE);
@@ -82,24 +99,40 @@ extern "C" {
   } 
   
   void store_2bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexStore );
+    stores++;
+    pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_WRITE);
     }
   } 
   
   void store_1bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexStore );
+    stores++;
+    pthread_mutex_unlock( &mutexStore );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_WRITE);
     }
   } 
   
   void load_16bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexLoad );
+    loads++;
+    pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_READ);
     }
   }
   
   void load_8bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexLoad );
+    loads++;
+    pthread_mutex_unlock( &mutexLoad );
     //fprintf(stderr, "load_8bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_READ);
@@ -107,6 +140,10 @@ extern "C" {
   }
   
   void load_4bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexLoad );
+    loads++;
+    pthread_mutex_unlock( &mutexLoad );
     //fprintf(stderr, "load_4bytes %lx WWWWWWWWWWWWWWWWWWWWW\n", addr);
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_READ);
@@ -114,12 +151,20 @@ extern "C" {
   }
   
   void load_2bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexLoad );
+    loads++;
+    pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_READ);
     }
   }
   
   void load_1bytes(unsigned long addr) {
+    
+    pthread_mutex_lock( &mutexLoad );
+    loads++;
+    pthread_mutex_unlock( &mutexLoad );
     if(isMultithreading) {
       xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_READ);
     }
@@ -146,6 +191,7 @@ extern "C" {
 
   void finalizer (void) {
     initialized = false;
+    printf("#######loads: %lld, stores: %lld", loads, stores);
     xrun::getInstance().finalize();
   }
 
@@ -178,7 +224,7 @@ extern "C" {
     if (!initialized) {
       ptr = tempmalloc(sz);
     } else {
-   // printf("**actual MALLOC sz %ld *\n", sz);
+      // printf("**actual MALLOC sz %ld *\n", sz);
       ptr = xmemory::getInstance().malloc (sz);
     }
     if (ptr == NULL) {
