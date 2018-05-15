@@ -1,6 +1,22 @@
+diff -Nur llvm-3.2-source-orig/build.sh llvm-3.2-new/build.sh
+--- llvm-3.2-source-orig/build.sh	1969-12-31 19:00:00.000000000 -0500
++++ llvm-3.2-new/build.sh	2018-05-15 17:15:29.571659200 -0400
+@@ -0,0 +1,12 @@
++#!/bin/sh
++
++./configure --prefix=$(pwd)/../build_patch \
++            --sysconfdir=/etc          \
++            --libdir=$(pwd)/../build_patch/lib/llvm     \
++            --enable-optimized         \
++            --enable-shared            \
++            --enable-targets=all       \
++            --disable-assertions       \
++            --disable-debug-runtime    \
++            --disable-expensive-checks 
++make -j8 & make install
 diff -Nur llvm-3.2-source-orig/include/llvm/InitializePasses.h llvm-3.2-new/include/llvm/InitializePasses.h
---- llvm-3.2-source-orig/include/llvm/InitializePasses.h	2013-07-08 11:13:46.040948440 -0700
-+++ llvm-3.2-new/include/llvm/InitializePasses.h	2013-07-11 14:30:44.913893016 -0700
+--- llvm-3.2-source-orig/include/llvm/InitializePasses.h	2012-11-02 17:48:17.000000000 -0400
++++ llvm-3.2-new/include/llvm/InitializePasses.h	2018-05-15 17:15:29.551265500 -0400
 @@ -46,6 +46,9 @@
  /// Instrumentation library.
  void initializeInstrumentation(PassRegistry&);
@@ -20,8 +36,8 @@ diff -Nur llvm-3.2-source-orig/include/llvm/InitializePasses.h llvm-3.2-new/incl
  void initializeEarlyCSEPass(PassRegistry&);
  void initializeExpandISelPseudosPass(PassRegistry&);
 diff -Nur llvm-3.2-source-orig/include/llvm/Transforms/Instrumentation.h llvm-3.2-new/include/llvm/Transforms/Instrumentation.h
---- llvm-3.2-source-orig/include/llvm/Transforms/Instrumentation.h	2013-07-08 11:13:46.048948440 -0700
-+++ llvm-3.2-new/include/llvm/Transforms/Instrumentation.h	2013-07-11 14:30:44.917893016 -0700
+--- llvm-3.2-source-orig/include/llvm/Transforms/Instrumentation.h	2012-10-15 10:20:06.000000000 -0400
++++ llvm-3.2-new/include/llvm/Transforms/Instrumentation.h	2018-05-15 17:15:29.552686300 -0400
 @@ -38,6 +38,7 @@
  // Insert ThreadSanitizer (race detection) instrumentation
  FunctionPass *createThreadSanitizerPass();
@@ -31,8 +47,8 @@ diff -Nur llvm-3.2-source-orig/include/llvm/Transforms/Instrumentation.h llvm-3.
  // BoundsChecking - This pass instruments the code to perform run-time bounds
  // checking on loads, stores, and other memory intrinsics.
 diff -Nur llvm-3.2-source-orig/include/llvm-c/Initialization.h llvm-3.2-new/include/llvm-c/Initialization.h
---- llvm-3.2-source-orig/include/llvm-c/Initialization.h	2013-07-08 11:13:46.048948440 -0700
-+++ llvm-3.2-new/include/llvm-c/Initialization.h	2013-07-11 14:30:44.921893016 -0700
+--- llvm-3.2-source-orig/include/llvm-c/Initialization.h	2012-03-20 23:54:29.000000000 -0400
++++ llvm-3.2-new/include/llvm-c/Initialization.h	2018-05-15 17:15:29.554134800 -0400
 @@ -38,6 +38,7 @@
  void LLVMInitializeInstCombine(LLVMPassRegistryRef R);
  void LLVMInitializeIPO(LLVMPassRegistryRef R);
@@ -42,16 +58,16 @@ diff -Nur llvm-3.2-source-orig/include/llvm-c/Initialization.h llvm-3.2-new/incl
  void LLVMInitializeIPA(LLVMPassRegistryRef R);
  void LLVMInitializeCodeGen(LLVMPassRegistryRef R);
 diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/CMakeLists.txt llvm-3.2-new/lib/Transforms/instrumenter/CMakeLists.txt
---- llvm-3.2-source-orig/lib/Transforms/instrumenter/CMakeLists.txt	1969-12-31 16:00:00.000000000 -0800
-+++ llvm-3.2-new/lib/Transforms/instrumenter/CMakeLists.txt	2013-07-11 14:30:45.057893015 -0700
+--- llvm-3.2-source-orig/lib/Transforms/instrumenter/CMakeLists.txt	1969-12-31 19:00:00.000000000 -0500
++++ llvm-3.2-new/lib/Transforms/instrumenter/CMakeLists.txt	2018-05-15 17:15:29.555992600 -0400
 @@ -0,0 +1,3 @@
 +add_llvm_loadable_module( LLVMHello
 +  Hello.cpp
 +  )
 diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp
---- llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp	1969-12-31 16:00:00.000000000 -0800
-+++ llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp	2013-07-11 14:30:45.057893015 -0700
-@@ -0,0 +1,363 @@
+--- llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp	1969-12-31 19:00:00.000000000 -0500
++++ llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp	2018-05-15 17:15:34.099751300 -0400
+@@ -0,0 +1,366 @@
 +//===-- Instrumenter.cpp - memory error detector ------------*- C++ -*-===//
 +//
 +//                     The LLVM Compiler Infrastructure
@@ -272,7 +288,7 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +
 +  if (typeSize != 8  && typeSize != 16 &&
 +      typeSize != 32 && typeSize != 64 && typeSize != 128) {
-+    // Ignore all unusual sizes.
++    errs() << "ignored typesize is " << typeSize << "at: ";
 +    return;
 +  }
 +
@@ -331,7 +347,10 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +}
 +
 +bool isLocalVariable(Value * value) {
-+ // errs() << "Value id:" << value->getValueID() << "\n";
++  errs() << "Value id:" << value->getValueID();
++  if (value->hasName())
++    errs() << "   Value name:" << value->getName();
++  errs() << "\n";
 +  return value->getValueID() == 48; 
 +}
 +
@@ -416,8 +435,8 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +}
 +
 diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/Makefile llvm-3.2-new/lib/Transforms/instrumenter/Makefile
---- llvm-3.2-source-orig/lib/Transforms/instrumenter/Makefile	1969-12-31 16:00:00.000000000 -0800
-+++ llvm-3.2-new/lib/Transforms/instrumenter/Makefile	2013-07-11 14:30:45.057893015 -0700
+--- llvm-3.2-source-orig/lib/Transforms/instrumenter/Makefile	1969-12-31 19:00:00.000000000 -0500
++++ llvm-3.2-new/lib/Transforms/instrumenter/Makefile	2018-05-15 17:15:29.558741800 -0400
 @@ -0,0 +1,11 @@
 +# Makefile for hello pass
 +
@@ -430,9 +449,21 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/Makefile llvm-3.2-new
 +
 +# Include the makefile implementation stuff
 +include $(LEVEL)/Makefile.common
+diff -Nur llvm-3.2-source-orig/lib/Transforms/Makefile llvm-3.2-new/lib/Transforms/Makefile
+--- llvm-3.2-source-orig/lib/Transforms/Makefile	2012-01-31 22:51:43.000000000 -0500
++++ llvm-3.2-new/lib/Transforms/Makefile	2018-05-15 17:15:29.571229700 -0400
+@@ -8,7 +8,7 @@
+ ##===----------------------------------------------------------------------===##
+ 
+ LEVEL = ../..
+-PARALLEL_DIRS = Utils Instrumentation Scalar InstCombine IPO Vectorize Hello
++PARALLEL_DIRS = Utils Instrumentation Scalar InstCombine IPO instrumenter Vectorize Hello
+ 
+ include $(LEVEL)/Makefile.config
+ 
 diff -Nur llvm-3.2-source-orig/tools/bugpoint/CMakeLists.txt llvm-3.2-new/tools/bugpoint/CMakeLists.txt
---- llvm-3.2-source-orig/tools/bugpoint/CMakeLists.txt	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/bugpoint/CMakeLists.txt	2013-07-11 14:30:45.305893014 -0700
+--- llvm-3.2-source-orig/tools/bugpoint/CMakeLists.txt	2012-01-31 22:51:43.000000000 -0500
++++ llvm-3.2-new/tools/bugpoint/CMakeLists.txt	2018-05-15 17:15:29.559167500 -0400
 @@ -1,4 +1,4 @@
 -set(LLVM_LINK_COMPONENTS asmparser instrumentation scalaropts ipo
 +set(LLVM_LINK_COMPONENTS asmparser instrumentation instrumenter scalaropts ipo
@@ -440,8 +471,8 @@ diff -Nur llvm-3.2-source-orig/tools/bugpoint/CMakeLists.txt llvm-3.2-new/tools/
  
  add_llvm_tool(bugpoint
 diff -Nur llvm-3.2-source-orig/tools/bugpoint/Makefile llvm-3.2-new/tools/bugpoint/Makefile
---- llvm-3.2-source-orig/tools/bugpoint/Makefile	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/bugpoint/Makefile	2013-07-11 14:30:45.305893014 -0700
+--- llvm-3.2-source-orig/tools/bugpoint/Makefile	2012-01-31 22:51:43.000000000 -0500
++++ llvm-3.2-new/tools/bugpoint/Makefile	2018-05-15 17:15:29.559542100 -0400
 @@ -9,7 +9,7 @@
  
  LEVEL := ../..
@@ -452,8 +483,8 @@ diff -Nur llvm-3.2-source-orig/tools/bugpoint/Makefile llvm-3.2-new/tools/bugpoi
  
  include $(LEVEL)/Makefile.common
 diff -Nur llvm-3.2-source-orig/tools/clang/examples/clang-interpreter/Makefile llvm-3.2-new/tools/clang/examples/clang-interpreter/Makefile
---- llvm-3.2-source-orig/tools/clang/examples/clang-interpreter/Makefile	2013-07-08 11:13:46.128948439 -0700
-+++ llvm-3.2-new/tools/clang/examples/clang-interpreter/Makefile	2013-07-11 14:30:45.141893015 -0700
+--- llvm-3.2-source-orig/tools/clang/examples/clang-interpreter/Makefile	2012-09-01 01:09:24.000000000 -0400
++++ llvm-3.2-new/tools/clang/examples/clang-interpreter/Makefile	2018-05-15 17:15:29.560147000 -0400
 @@ -16,7 +16,7 @@
  TOOL_NO_EXPORTS = 1
  
@@ -464,8 +495,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/examples/clang-interpreter/Makefile l
             clangParse.a clangSema.a clangStaticAnalyzerFrontend.a \
             clangStaticAnalyzerCheckers.a clangStaticAnalyzerCore.a \
 diff -Nur llvm-3.2-source-orig/tools/clang/include/clang/Basic/LangOptions.def llvm-3.2-new/tools/clang/include/clang/Basic/LangOptions.def
---- llvm-3.2-source-orig/tools/clang/include/clang/Basic/LangOptions.def	2013-07-08 11:13:46.100948439 -0700
-+++ llvm-3.2-new/tools/clang/include/clang/Basic/LangOptions.def	2013-07-11 14:30:45.065893015 -0700
+--- llvm-3.2-source-orig/tools/clang/include/clang/Basic/LangOptions.def	2012-11-21 03:33:40.000000000 -0500
++++ llvm-3.2-new/tools/clang/include/clang/Basic/LangOptions.def	2018-05-15 17:15:29.560737600 -0400
 @@ -174,6 +174,8 @@
  BENIGN_LANGOPT(Sanitize##ID, 1, 0, NAME " sanitizer")
  #include "clang/Basic/Sanitizers.def"
@@ -476,8 +507,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/include/clang/Basic/LangOptions.def l
  #undef VALUE_LANGOPT
  #undef BENIGN_LANGOPT
 diff -Nur llvm-3.2-source-orig/tools/clang/include/clang/Driver/Options.td llvm-3.2-new/tools/clang/include/clang/Driver/Options.td
---- llvm-3.2-source-orig/tools/clang/include/clang/Driver/Options.td	2013-07-08 11:13:46.100948439 -0700
-+++ llvm-3.2-new/tools/clang/include/clang/Driver/Options.td	2013-07-11 14:30:45.065893015 -0700
+--- llvm-3.2-source-orig/tools/clang/include/clang/Driver/Options.td	2012-11-10 19:28:33.000000000 -0500
++++ llvm-3.2-new/tools/clang/include/clang/Driver/Options.td	2018-05-15 17:15:29.561862800 -0400
 @@ -299,6 +299,7 @@
  def fthread_sanitizer : Flag<["-"], "fthread-sanitizer">, Group<f_Group>;
  def fno_thread_sanitizer : Flag<["-"], "fno-thread-sanitizer">, Group<f_Group>;
@@ -487,8 +518,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/include/clang/Driver/Options.td llvm-
  def fasm_blocks : Flag<["-"], "fasm-blocks">, Group<f_Group>;
  def fno_asm_blocks : Flag<["-"], "fno-asm-blocks">, Group<f_Group>;
 diff -Nur llvm-3.2-source-orig/tools/clang/lib/CodeGen/BackendUtil.cpp llvm-3.2-new/tools/clang/lib/CodeGen/BackendUtil.cpp
---- llvm-3.2-source-orig/tools/clang/lib/CodeGen/BackendUtil.cpp	2013-07-08 11:13:46.120948439 -0700
-+++ llvm-3.2-new/tools/clang/lib/CodeGen/BackendUtil.cpp	2013-07-11 14:30:45.117893015 -0700
+--- llvm-3.2-source-orig/tools/clang/lib/CodeGen/BackendUtil.cpp	2012-11-09 13:27:01.000000000 -0500
++++ llvm-3.2-new/tools/clang/lib/CodeGen/BackendUtil.cpp	2018-05-15 17:15:29.562557700 -0400
 @@ -168,6 +168,12 @@
    PM.add(createThreadSanitizerPass());
  }
@@ -518,8 +549,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/lib/CodeGen/BackendUtil.cpp llvm-3.2-
      PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                             addThreadSanitizerPass);
 diff -Nur llvm-3.2-source-orig/tools/clang/lib/CodeGen/CMakeLists.txt llvm-3.2-new/tools/clang/lib/CodeGen/CMakeLists.txt
---- llvm-3.2-source-orig/tools/clang/lib/CodeGen/CMakeLists.txt	2013-07-08 11:13:46.120948439 -0700
-+++ llvm-3.2-new/tools/clang/lib/CodeGen/CMakeLists.txt	2013-07-11 14:30:45.121893015 -0700
+--- llvm-3.2-source-orig/tools/clang/lib/CodeGen/CMakeLists.txt	2012-07-27 02:18:33.000000000 -0400
++++ llvm-3.2-new/tools/clang/lib/CodeGen/CMakeLists.txt	2018-05-15 17:15:29.562972800 -0400
 @@ -3,6 +3,7 @@
    bitreader
    bitwriter
@@ -529,8 +560,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/lib/CodeGen/CMakeLists.txt llvm-3.2-n
    linker
    vectorize
 diff -Nur llvm-3.2-source-orig/tools/clang/lib/Driver/Tools.cpp llvm-3.2-new/tools/clang/lib/Driver/Tools.cpp
---- llvm-3.2-source-orig/tools/clang/lib/Driver/Tools.cpp	2013-07-08 11:13:46.116948439 -0700
-+++ llvm-3.2-new/tools/clang/lib/Driver/Tools.cpp	2013-07-11 14:30:45.105893015 -0700
+--- llvm-3.2-source-orig/tools/clang/lib/Driver/Tools.cpp	2012-11-21 02:56:23.000000000 -0500
++++ llvm-3.2-new/tools/clang/lib/Driver/Tools.cpp	2018-05-15 17:15:29.565920100 -0400
 @@ -1606,6 +1606,11 @@
    ArgStringList CmdArgs;
  
@@ -564,8 +595,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/lib/Driver/Tools.cpp llvm-3.2-new/too
    if (Args.hasArg(options::OPT_ftest_coverage) ||
        Args.hasArg(options::OPT_coverage))
 diff -Nur llvm-3.2-source-orig/tools/clang/lib/Frontend/CompilerInvocation.cpp llvm-3.2-new/tools/clang/lib/Frontend/CompilerInvocation.cpp
---- llvm-3.2-source-orig/tools/clang/lib/Frontend/CompilerInvocation.cpp	2013-07-08 11:13:46.116948439 -0700
-+++ llvm-3.2-new/tools/clang/lib/Frontend/CompilerInvocation.cpp	2013-07-11 14:30:45.105893015 -0700
+--- llvm-3.2-source-orig/tools/clang/lib/Frontend/CompilerInvocation.cpp	2012-11-21 03:33:40.000000000 -0500
++++ llvm-3.2-new/tools/clang/lib/Frontend/CompilerInvocation.cpp	2018-05-15 17:15:29.567086600 -0400
 @@ -1100,7 +1100,7 @@
      if (Args.hasArg(OPT_fno_objc_infer_related_result_type))
        Opts.ObjCInferRelatedResultType = 0;
@@ -617,8 +648,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/lib/Frontend/CompilerInvocation.cpp l
        Diags.Report(diag::err_drv_unknown_argument) << (*I)->getAsString(*Args);
        Success = false;
 diff -Nur llvm-3.2-source-orig/tools/clang/tools/driver/CMakeLists.txt llvm-3.2-new/tools/clang/tools/driver/CMakeLists.txt
---- llvm-3.2-source-orig/tools/clang/tools/driver/CMakeLists.txt	2013-07-08 11:13:46.124948439 -0700
-+++ llvm-3.2-new/tools/clang/tools/driver/CMakeLists.txt	2013-07-11 14:30:45.137893015 -0700
+--- llvm-3.2-source-orig/tools/clang/tools/driver/CMakeLists.txt	2012-09-01 01:09:24.000000000 -0400
++++ llvm-3.2-new/tools/clang/tools/driver/CMakeLists.txt	2018-05-15 17:15:29.567589100 -0400
 @@ -5,6 +5,7 @@
    bitwriter
    codegen
@@ -628,8 +659,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/tools/driver/CMakeLists.txt llvm-3.2-
    linker
    selectiondag
 diff -Nur llvm-3.2-source-orig/tools/clang/tools/driver/Makefile llvm-3.2-new/tools/clang/tools/driver/Makefile
---- llvm-3.2-source-orig/tools/clang/tools/driver/Makefile	2013-07-08 11:13:46.124948439 -0700
-+++ llvm-3.2-new/tools/clang/tools/driver/Makefile	2013-07-11 14:30:45.137893015 -0700
+--- llvm-3.2-source-orig/tools/clang/tools/driver/Makefile	2012-09-01 02:20:25.000000000 -0400
++++ llvm-3.2-new/tools/clang/tools/driver/Makefile	2018-05-15 17:15:29.567966600 -0400
 @@ -30,7 +30,7 @@
  include $(CLANG_LEVEL)/../../Makefile.config
  
@@ -640,8 +671,8 @@ diff -Nur llvm-3.2-source-orig/tools/clang/tools/driver/Makefile llvm-3.2-new/to
             clangSerialization.a clangCodeGen.a clangParse.a clangSema.a \
             clangStaticAnalyzerFrontend.a clangStaticAnalyzerCheckers.a \
 diff -Nur llvm-3.2-source-orig/tools/llvm-cov/CMakeLists.txt llvm-3.2-new/tools/llvm-cov/CMakeLists.txt
---- llvm-3.2-source-orig/tools/llvm-cov/CMakeLists.txt	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/llvm-cov/CMakeLists.txt	2013-07-11 14:30:45.301893014 -0700
+--- llvm-3.2-source-orig/tools/llvm-cov/CMakeLists.txt	2011-10-04 15:38:16.000000000 -0400
++++ llvm-3.2-new/tools/llvm-cov/CMakeLists.txt	2018-05-15 17:15:29.568391800 -0400
 @@ -1,4 +1,4 @@
 -set(LLVM_LINK_COMPONENTS instrumentation )
 +set(LLVM_LINK_COMPONENTS instrumentation instrumenter )
@@ -649,8 +680,8 @@ diff -Nur llvm-3.2-source-orig/tools/llvm-cov/CMakeLists.txt llvm-3.2-new/tools/
  add_llvm_tool(llvm-cov
    llvm-cov.cpp
 diff -Nur llvm-3.2-source-orig/tools/llvm-cov/Makefile llvm-3.2-new/tools/llvm-cov/Makefile
---- llvm-3.2-source-orig/tools/llvm-cov/Makefile	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/llvm-cov/Makefile	2013-07-11 14:30:45.301893014 -0700
+--- llvm-3.2-source-orig/tools/llvm-cov/Makefile	2011-10-18 15:27:24.000000000 -0400
++++ llvm-3.2-new/tools/llvm-cov/Makefile	2018-05-15 17:15:29.568768600 -0400
 @@ -9,7 +9,7 @@
  
  LEVEL := ../..
@@ -661,8 +692,8 @@ diff -Nur llvm-3.2-source-orig/tools/llvm-cov/Makefile llvm-3.2-new/tools/llvm-c
  # This tool has no plugins, optimize startup time.
  TOOL_NO_EXPORTS := 1
 diff -Nur llvm-3.2-source-orig/tools/llvm-stress/CMakeLists.txt llvm-3.2-new/tools/llvm-stress/CMakeLists.txt
---- llvm-3.2-source-orig/tools/llvm-stress/CMakeLists.txt	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/llvm-stress/CMakeLists.txt	2013-07-11 14:30:45.301893014 -0700
+--- llvm-3.2-source-orig/tools/llvm-stress/CMakeLists.txt	2012-02-26 03:35:53.000000000 -0500
++++ llvm-3.2-new/tools/llvm-stress/CMakeLists.txt	2018-05-15 17:15:29.569287500 -0400
 @@ -1,4 +1,4 @@
 -set(LLVM_LINK_COMPONENTS bitreader asmparser bitwriter instrumentation scalaropts ipo)
 +set(LLVM_LINK_COMPONENTS bitreader asmparser bitwriter instrumentation instrumenter scalaropts ipo)
@@ -670,8 +701,8 @@ diff -Nur llvm-3.2-source-orig/tools/llvm-stress/CMakeLists.txt llvm-3.2-new/too
  add_llvm_tool(llvm-stress
    llvm-stress.cpp
 diff -Nur llvm-3.2-source-orig/tools/llvm-stress/Makefile llvm-3.2-new/tools/llvm-stress/Makefile
---- llvm-3.2-source-orig/tools/llvm-stress/Makefile	2013-07-08 11:13:46.272948436 -0700
-+++ llvm-3.2-new/tools/llvm-stress/Makefile	2013-07-11 14:30:45.301893014 -0700
+--- llvm-3.2-source-orig/tools/llvm-stress/Makefile	2012-02-26 03:35:53.000000000 -0500
++++ llvm-3.2-new/tools/llvm-stress/Makefile	2018-05-15 17:15:29.569666500 -0400
 @@ -10,7 +10,7 @@
  LEVEL := ../..
  TOOLNAME := llvm-stress
@@ -682,8 +713,8 @@ diff -Nur llvm-3.2-source-orig/tools/llvm-stress/Makefile llvm-3.2-new/tools/llv
  # This tool has no plugins, optimize startup time.
  TOOL_NO_EXPORTS = 1
 diff -Nur llvm-3.2-source-orig/tools/opt/Makefile llvm-3.2-new/tools/opt/Makefile
---- llvm-3.2-source-orig/tools/opt/Makefile	2013-07-08 11:13:46.268948436 -0700
-+++ llvm-3.2-new/tools/opt/Makefile	2013-07-11 14:30:45.277893014 -0700
+--- llvm-3.2-source-orig/tools/opt/Makefile	2012-10-18 19:22:48.000000000 -0400
++++ llvm-3.2-new/tools/opt/Makefile	2018-05-15 17:15:29.570155900 -0400
 @@ -9,6 +9,6 @@
  
  LEVEL := ../..
@@ -693,8 +724,8 @@ diff -Nur llvm-3.2-source-orig/tools/opt/Makefile llvm-3.2-new/tools/opt/Makefil
  
  include $(LEVEL)/Makefile.common
 diff -Nur llvm-3.2-source-orig/tools/opt/opt.cpp llvm-3.2-new/tools/opt/opt.cpp
---- llvm-3.2-source-orig/tools/opt/opt.cpp	2013-07-08 11:13:46.268948436 -0700
-+++ llvm-3.2-new/tools/opt/opt.cpp	2013-07-11 14:30:45.277893014 -0700
+--- llvm-3.2-source-orig/tools/opt/opt.cpp	2012-10-24 13:55:53.000000000 -0400
++++ llvm-3.2-new/tools/opt/opt.cpp	2018-05-15 17:15:29.570806100 -0400
 @@ -579,6 +579,7 @@
    initializeTransformUtils(Registry);
    initializeInstCombine(Registry);
@@ -703,29 +734,3 @@ diff -Nur llvm-3.2-source-orig/tools/opt/opt.cpp llvm-3.2-new/tools/opt/opt.cpp
    initializeTarget(Registry);
  
    cl::ParseCommandLineOptions(argc, argv,
---- llvm-3.2-source-orig/lib/Transforms/Makefile	2013-07-08 11:13:46.092948439 -0700
-+++ llvm-3.2-new/lib/Transforms/Makefile	2013-07-11 15:11:12.553876034 -0700
-@@ -8,7 +8,7 @@
- ##===----------------------------------------------------------------------===##
- 
- LEVEL = ../..
--PARALLEL_DIRS = Utils Instrumentation Scalar InstCombine IPO Vectorize Hello
-+PARALLEL_DIRS = Utils Instrumentation Scalar InstCombine IPO instrumenter Vectorize Hello
- 
- include $(LEVEL)/Makefile.config
- 
---- llvm-3.2-source-orig/build.sh	1969-12-31 16:00:00.000000000 -0800
-+++ llvm-3.2/build.sh	2013-07-09 10:49:58.293157320 -0700
-@@ -0,0 +1,12 @@
-+#!/bin/sh
-+
-+./configure --prefix=$(pwd)/../build_patch \
-+            --sysconfdir=/etc          \
-+            --libdir=$(pwd)/../build_patch/lib/llvm     \
-+            --enable-optimized         \
-+            --enable-shared            \
-+            --enable-targets=all       \
-+            --disable-assertions       \
-+            --disable-debug-runtime    \
-+            --disable-expensive-checks 
-+make -j8 & make install
