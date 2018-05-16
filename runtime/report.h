@@ -44,7 +44,10 @@ public:
     assert(end != NULL);
     assert(cacheWrites != NULL);
 
-    fprintf(stderr, "reporting start %p end %p cacheWrites %p cacheTrackings %p\n", start, end, cacheWrites, cacheTrackings);
+    fprintf(stderr, 
+      "report.initialize(isHeap=%s, start=%p, end=%p, cacheWrites=%p, cacheTrackings=%p)\n\n", 
+      (isHeap ? "true" : "false"), start, end, cacheWrites, cacheTrackings
+    );
 
     _isHeap = isHeap;
     _start = (char *)start;
@@ -269,7 +272,7 @@ public:
         }
 
         if(track->getInvalidations() > 0) {
-          fprintf(stderr, "cache %d: cacheWrites is %ld invalidations %lx at %p\n", i, _cacheWrites[i], track->getInvalidations(), track);
+          fprintf(stderr, "\t\tgetCacheInvalidations(): cache %d: cacheWrites is %ld invalidations %lx at %p\n", i, _cacheWrites[i], track->getInvalidations(), track);
            
           track->reportFalseSharing();
         }
@@ -319,7 +322,7 @@ public:
         unsigned long  objectEnd = (unsigned long)object->getObjectEnd();
         unsigned long  cacheStart = getCacheStart((void *)objectStart);
         
-     //   fprintf(stderr, "reportHeapObjects pos %p objectStart %lx objectEnd %lx\n", pos, objectStart, objectEnd); 
+        fprintf(stderr, "\treportHeapObjects(pos=%p, objectStart=%lx, objectEnd=%lx)\n", pos, objectStart, objectEnd); 
         // Calculate how many cache lines are occupied by this object.
         int   cachelineIndex = getCacheline(objectOffset); 
         int   lines = getCoveredCachelines(cacheStart, objectEnd);
@@ -367,7 +370,7 @@ public:
     Elf_Ehdr *hdr = elf->hdr;
     Elf_Sym *symbol;
 
-   fprintf(stderr, "reportGlobalObjects now. globalstart %lx globalend %lx\n", globalStart, globalEnd);
+    fprintf(stderr, "\treport.reportGlobalObjects(); globalstart=%lx, globalend=%lx\n\n", globalStart, globalEnd);
     for (symbol = elf->symtab_start; symbol < elf->symtab_stop; symbol++) {
       if(symbol == NULL) {
         continue;
@@ -436,11 +439,10 @@ public:
 
 //    fprintf(stderr, "filename %s\n", _curFilename);
     if(object->isHeapObject) { 
-      fprintf(stderr, "FALSE SHARING HEAP OBJECT: start %p end %p (with size %lx). Accesses %lx invalidations %lx writes %lx. Callsite stack:\n", object->start, object->stop, object->unitlength, object->totalAccesses, object->invalidations, object->totalWrites);
+      fprintf(stderr, "\t\tFALSE SHARING HEAP OBJECT: start %p end %p (with size %lx). Accesses %lx invalidations %lx writes %lx. Callsite stack:\n", object->start, object->stop, object->unitlength, object->totalAccesses, object->invalidations, object->totalWrites);
       for(int i = 0; i < CALL_SITE_DEPTH; i++) {
         if(object->u.callsite[i] != 0) {
           sprintf(buf, "addr2line -i -e %s %lx", _curFilename, object->u.callsite[i]);
-//          fprintf(stderr, "callsite: %lx\n", object->u.callsite[i]);
           ret = system(buf);
         }
       }

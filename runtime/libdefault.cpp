@@ -191,7 +191,6 @@ extern "C" {
 
   void finalizer (void) {
     initialized = false;
-    printf("#######loads: %lld, stores: %lld", loads, stores);
     xrun::getInstance().finalize();
   }
 

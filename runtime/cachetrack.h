@@ -187,12 +187,12 @@ public:
   /// Report false sharing
   void reportFalseSharing(void) {
     if(_thisCache.invalidations() > 0) {
-      fprintf(stderr, "\tCacheStart 0x%lx Accesses %lx (at %p) Writes %lx invalidations %ld THREAD %d\n", _cacheStart, _accesses, &_accesses,  _writes, _thisCache.invalidations(), getThreadIndex());
+      fprintf(stderr, "\t\t\tCacheStart 0x%lx Accesses %lx (at %p) Writes %lx invalidations %ld THREAD %d\n", _cacheStart, _accesses, &_accesses,  _writes, _thisCache.invalidations(), getThreadIndex());
       //fprintf(stderr, "\tCacheStart 0x%lx Accesses %lx (at %p) Writes %lx invalidations %ld THREAD %d\n", _cacheStart, _accesses, &_accesses,  _writes, _thisCache.invalidations(), getThreadIndex());
     }
     if(_hasPredicts) {
       if(_predictCache1 && _predictCache1->invalidations() > 0) {
-        fprintf(stderr, "Potential false sharing: _cacheStart %p invalidations %lx\n", _predictCache1->getCacheStart(), _predictCache1->invalidations());
+        fprintf(stderr, "\t\t\tPotential false sharing: _cacheStart %p invalidations %lx\n", _predictCache1->getCacheStart(), _predictCache1->invalidations());
       }
 #if 0
       if(_predictCache2 && _predictCache2->invalidations() > 0) {

@@ -72,6 +72,7 @@ public:
 
   void finalize (void)
   {
+    fprintf(stderr, "================================================\n");
     fprintf(stderr, "Finalizing, check the false sharing problem now.\n");
     // If the tid was set, it means that this instance was
     // initialized: end the transaction (at the end of main()).
