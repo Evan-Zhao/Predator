@@ -56,11 +56,14 @@
 using namespace std;
 
 extern "C" {
+  const int MAXFUNCNAME = 100;
   struct wordinfo {
+    unsigned long instId;
     int         unitsize;
     int         tindex;
     int         reads;
     int         writes;
+    char funcName[MAXFUNCNAME + 1];
   };
 
   typedef enum E_Result_Handle_Access {
@@ -127,7 +130,8 @@ public:
   // Record word access. We are not holding lock since it is impossible to have race condition.
   // Here, if the access is always double word, we do not care about next word. since 
   // the first word's unit size will be DOUBLE_WORD 
-  void recordWordAccess(int tindex, void * addr, int bytes, eAccessType type) {
+  void recordWordAccess(int tindex, void * addr, int bytes, eAccessType type, 
+                        const char *funcName, unsigned long instId) {
     int index = getCacheOffset((size_t)addr);
     if(tindex != _words[index].tindex) {
       if(_words[index].tindex == WORD_THREAD_INIT) {
@@ -146,6 +150,9 @@ public:
     else {
       _words[index].reads++;
     }
+
+    strcpy(_words[index].funcName, funcName);
+    _words[index].instId = instId;
   }
 
   unsigned long getWrites(void) {
@@ -235,7 +242,8 @@ public:
 
   // Main function to handle each access. 
   // Here, all writes on this cache line should be larger than the predifined threshold.
-  eResultHandleAccess handleAccess(void * addr, int bytes, eAccessType type) {
+  eResultHandleAccess handleAccess(void * addr, int bytes, eAccessType type, 
+                                   const char *funcName, unsigned long instId) {
     eResultHandleAccess result = E_RHA_NONE;
     unsigned long accessNum = _accesses;
     // Check whether we need to sample this lines accesses now.
@@ -244,7 +252,7 @@ public:
       int wordindex = getCacheOffset((size_t)addr);
       
       // Record the detailed information of this accesses.
-      recordWordAccess(tindex, addr, bytes, type);
+      recordWordAccess(tindex, addr, bytes, type, funcName, instId);
 
       lock();
 

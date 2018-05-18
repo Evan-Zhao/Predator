@@ -459,6 +459,7 @@ public:
       }
     }
 
+    #define OUTPUT_WORD_ACCESSES
     #ifdef OUTPUT_WORD_ACCESSES
     size = object->unitlength;
     int * address = (int *)object->start;
@@ -466,7 +467,9 @@ public:
     for(int i = 0; i < size/xdefines::WORD_SIZE; i++) {
       if((winfo[i].reads + winfo[i].writes) != 0) {
         //fprintf(stderr, "\tWord %d: at address %p (line %d), reads %d writes %d ", i, address, winfo[i].reads, winfo[i].writes); 
-        fprintf(stderr, "\t\t\tAddress %p (cache line %ld): reads %d writes %d ", address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes); 
+        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %u@%s, ",
+                address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes,
+                winfo[i].instId, winfo[i].funcName); 
         if(winfo[i].tindex == cachetrack::WORD_THREAD_SHARED) {
           fprintf(stderr, "by mulitple thread\n");
         }
