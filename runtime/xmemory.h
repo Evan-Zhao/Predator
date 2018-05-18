@@ -714,7 +714,7 @@ public:
  
   // Main entry of handle each access
   inline void handleAccess(unsigned long addr, int bytes, eAccessType type, 
-                           const char *funcName, unsigned long instId) {
+                           unsigned long funcId, unsigned long instId) {
     if((intptr_t)addr > MAX_USER_SPACE) {
       return;
     }
@@ -750,7 +750,7 @@ public:
           PRERR("WHAT?????track at %p\n", track);
         }
         assert((intptr_t)track > xdefines::THRESHOLD_TRACK_DETAILS);
-        result = track->handleAccess((void *)addr, bytes, type, funcName, instId);
+        result = track->handleAccess((void *)addr, bytes, type, funcId, instId);
 #ifdef PREDICTION
         if(result == E_RHA_EVALUATE_FALSE_SHARING) {
           evaluatePotentialFalsesharing((void *)addr, index);

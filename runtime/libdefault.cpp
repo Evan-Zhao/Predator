@@ -70,63 +70,63 @@ extern "C" {
   // }
   
 #if 1
-  void store_16bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void store_16bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_WRITE, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_WRITE, funcId, instNum);
     }
   }
 
-  void store_8bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void store_8bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_WRITE, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_WRITE, funcId, instNum);
     }
   }
   
-  void store_4bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void store_4bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_WRITE, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_WRITE, funcId, instNum);
     }
   } 
   
-  void store_2bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void store_2bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_WRITE, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_WRITE, funcId, instNum);
     }
   } 
   
-  void store_1bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void store_1bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_WRITE, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_WRITE, funcId, instNum);
     }
   } 
   
-  void load_16bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void load_16bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_READ, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 16, E_ACCESS_READ, funcId, instNum);
     }
   }
   
-  void load_8bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void load_8bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_READ, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 8, E_ACCESS_READ, funcId, instNum);
     }
   }
   
-  void load_4bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void load_4bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_READ, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 4, E_ACCESS_READ, funcId, instNum);
     }
   }
   
-  void load_2bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void load_2bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_READ, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 2, E_ACCESS_READ, funcId, instNum);
     }
   }
   
-  void load_1bytes(unsigned long addr, const char *funcName, unsigned long instNum) {
+  void load_1bytes(unsigned long addr, unsigned long funcId, unsigned long instNum) {
     if(isMultithreading) {
-      xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_READ, funcName, instNum);
+      xmemory::getInstance().handleAccess(addr, 1, E_ACCESS_READ, funcId, instNum);
     }
   }
 #endif

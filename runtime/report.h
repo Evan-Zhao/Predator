@@ -467,9 +467,9 @@ public:
     for(int i = 0; i < size/xdefines::WORD_SIZE; i++) {
       if((winfo[i].reads + winfo[i].writes) != 0) {
         //fprintf(stderr, "\tWord %d: at address %p (line %d), reads %d writes %d ", i, address, winfo[i].reads, winfo[i].writes); 
-        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %lu@%s, ",
+        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %lu@%lu, ",
                 address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes,
-                winfo[i].instId, winfo[i].funcName); 
+                winfo[i].instId, winfo[i].funcId); 
         if(winfo[i].tindex == cachetrack::WORD_THREAD_SHARED) {
           fprintf(stderr, "by mulitple thread\n");
         }
