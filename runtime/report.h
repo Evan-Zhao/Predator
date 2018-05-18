@@ -272,7 +272,8 @@ public:
         }
 
         if(track->getInvalidations() > 0) {
-          fprintf(stderr, "\t\tgetCacheInvalidations(): cache %d: cacheWrites is %ld invalidations %ld at %p\n", i, _cacheWrites[i], track->getInvalidations(), track);
+          fprintf(stderr, "\t\tgetCacheInvalidations(): cache %lu: cacheWrites is %ld invalidations %ld at %p\n", 
+                  i, _cacheWrites[i], track->getInvalidations(), track);
            
           track->reportFalseSharing();
         }
@@ -459,7 +460,6 @@ public:
       }
     }
 
-    #define OUTPUT_WORD_ACCESSES
     #ifdef OUTPUT_WORD_ACCESSES
     size = object->unitlength;
     int * address = (int *)object->start;
@@ -467,7 +467,7 @@ public:
     for(int i = 0; i < size/xdefines::WORD_SIZE; i++) {
       if((winfo[i].reads + winfo[i].writes) != 0) {
         //fprintf(stderr, "\tWord %d: at address %p (line %d), reads %d writes %d ", i, address, winfo[i].reads, winfo[i].writes); 
-        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %u@%s, ",
+        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %lu@%s, ",
                 address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes,
                 winfo[i].instId, winfo[i].funcName); 
         if(winfo[i].tindex == cachetrack::WORD_THREAD_SHARED) {

@@ -40,7 +40,7 @@ CXX = g++ -g -O2 -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/detect -I$(INCLUDE_DIR)/heap 
 # -march=core2 -msse3 -DSSE_SUPPORT 
 #CFLAGS   = -Wall -msse3 -DSSE_SUPPORT -fno-omit-frame-pointer
 #CFLAGS   = -fno-omit-frame-pointer -DPREDICTION
-CFLAGS   = -fno-omit-frame-pointer -DCENTRALIZED_BIG_HEAP -DOUTPUT_WORD_ACCESSES -DUSING_SIGUSR2
+CFLAGS   = -Wno-unused-result -fno-omit-frame-pointer -DCENTRALIZED_BIG_HEAP -DOUTPUT_WORD_ACCESSES -DUSING_SIGUSR2
 #-DOUTPUT_WORD_ACCESSES
 #CFLAGS   = -fno-omit-frame-pointer -DPREDICTION -DOUTPUT_WORD_ACCESSES
 #-DIMPROVE_PERF 
