@@ -66,8 +66,8 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/CMakeLists.txt llvm-3
 +  )
 diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp
 --- llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp	1969-12-31 19:00:00.000000000 -0500
-+++ llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp	2018-05-15 17:15:34.099751300 -0400
-@@ -0,0 +1,366 @@
++++ llvm-3.2-new/lib/Transforms/instrumenter/instrumenter.cpp	2018-05-18 00:35:44.930407700 -0400
+@@ -0,0 +1,404 @@
 +//===-- Instrumenter.cpp - memory error detector ------------*- C++ -*-===//
 +//
 +//                     The LLVM Compiler Infrastructure
@@ -108,6 +108,7 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +#include "llvm/InitializePasses.h"
 +#include "llvm-c/Initialization.h"
 +
++#include <map>
 +#include <string>
 +#include <algorithm>
 +
@@ -132,15 +133,18 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +struct Instrumenter : public FunctionPass {
 +  Instrumenter();
 +  virtual const char *getPassName() const;
-+  void instrementMemoryAccess(Instruction * ins);
-+  void instrumentAddress(Instruction *origIns, IRBuilder<> &IRB,
-+                         Value *addr, uint32_t typeSize, bool isWrite);
++  void instrementMemoryAccess(Instruction *ins, const StringRef &funcName, unsigned long instCounter);
++  void instrumentAddress(Instruction *origIns,
++                                     IRBuilder<> &IRB, Value *addr,
++                                     uint32_t typeSize, bool isWrite, 
++                                     const StringRef &funcName, unsigned long instCounter);
 +  bool instrumentMemIntrinsic(MemIntrinsic *mInst);
 +  void instrumentMemIntrinsicParam(Instruction *origIns, Value *addr,
 +                                   Value *size,
 +                                   Instruction *insertBefore, bool isWrite);
-+  Instruction * insertAccessCallback( Instruction *insertBefore, Value *addr,
-+                                   bool isWrite, size_t accessSizeArrayIndex);
++  Instruction * insertAccessCallback(Instruction *insertBefore, Value *addr,
++    bool isWrite, size_t accessSizeArrayIndex, 
++    const StringRef &funcName, unsigned long instCounter);
 +
 +  bool runOnFunction(Function &F);
 +  virtual bool doInitialization(Module &M);
@@ -159,6 +163,8 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  Type *intptrType;
 +  Type *intptrPtrType;
 +  InlineAsm *noopAsm;
++  std::map<int, StringRef> funcNames;
++  int funcCounter;
 +};
 +
 +}  // namespace
@@ -184,7 +190,6 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +                false, false)
 +Instrumenter::Instrumenter() : FunctionPass(ID) { }
 +FunctionPass *llvm::createInstrumenterPass() {
-+//  errs() << "\n^^^^^^^^^^^^^^^^^^Instrumenter initialization. CreateInstrumenterPass" << "\n";
 +  return new Instrumenter();
 +}
 +const char *Instrumenter::getPassName() const {
@@ -199,6 +204,8 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  if (!TD)
 +    return false;
 +
++  funcCounter = 0;
++
 +  context = &(M.getContext());
 +  LongSize = TD->getPointerSizeInBits();
 +  intptrType = Type::getIntNTy(*context, LongSize);
@@ -208,7 +215,6 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  ctorFunction = Function::Create(
 +      FunctionType::get(Type::getVoidTy(*context), false),
 +      GlobalValue::InternalLinkage, "instrumenter", &M);
-+//   errs() << "\nHello: ctorFunction: " << ctorFunction->getName() << "\n";
 + 
 +  BasicBlock *ctorBB = BasicBlock::Create(*context, "", ctorFunction);
 +  Instruction * ctorinsertBefore = ReturnInst::Create(*context, ctorBB);
@@ -219,6 +225,8 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  noopAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
 +                           StringRef(""), StringRef(""),
 +                           /*hasSideEffects=*/true);
++
++  Type *int64Type = intptrType, *stringPtrType = Type::getInt8Ty(*context);
 +
 +  // Create instrumenation callbacks.
 +  for (size_t isWriteAccess = 0; isWriteAccess <= 1; isWriteAccess++) {
@@ -235,7 +243,7 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +      // If we are merging crash callbacks, they have two parameters.
 +      accessCallback[isWriteAccess][accessSizeArrayIndex] =
 +          checkInterfaceFunction(M.getOrInsertFunction(
-+              funcName, IRB.getVoidTy(), intptrType, NULL));
++              funcName, IRB.getVoidTy(), intptrType, stringPtrType, int64Type, NULL));
 +    }
 +  }
 +
@@ -275,7 +283,7 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  return NULL;
 +}
 +
-+void Instrumenter::instrementMemoryAccess(Instruction *ins) {
++void Instrumenter::instrementMemoryAccess(Instruction *ins, const StringRef &funcName, unsigned long instCounter) {
 +  bool isWrite = false;
 +  Value *addr = isInterestingMemoryAccess(ins, &isWrite);
 +  assert(addr);
@@ -292,22 +300,54 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +    return;
 +  }
 +
-+//  errs() << "typesize is " << typeSize << "at: ";
-+//  ins->dump();
-+
 +  IRBuilder<> IRB(ins);
-+  instrumentAddress(ins, IRB, addr, typeSize, isWrite);
++  instrumentAddress(ins, IRB, addr, typeSize, isWrite, funcName, instCounter);
 +}
 +
 +// General function call before some given instruction
 +Instruction * Instrumenter::insertAccessCallback(
 +    Instruction *insertBefore, Value *addr,
-+    bool isWrite, size_t accessSizeArrayIndex) {
++    bool isWrite, size_t accessSizeArrayIndex, 
++    const StringRef &funcName, unsigned long instCounter) {
 +  IRBuilder<> IRB(insertBefore);
-+  CallInst *Call = IRB.CreateCall(accessCallback[isWrite][accessSizeArrayIndex], addr);
++
++  std::vector<Value*> arguments;
++  arguments.push_back(addr);
++  arguments.push_back(IRB.CreateGlobalStringPtr(funcName));
++  arguments.push_back(ConstantInt::get(
++      Type::getInt64Ty(*context),
++      (long long)instCounter
++  ));
++
++  // errs() << "Operand: ";
++  // operand->print(errs());
++  // errs() << "    is a(n) ";
++  // if (Instruction *IO = dyn_cast<Instruction>(operand)) {
++  //   errs() << "Instruction\n";
++  //   errs() << "Subfields:\n\t";
++  //   for (llvm::User::op_iterator op = IO->op_begin(); op != IO->op_end(); op++) {
++  //     op->get()->print(errs());
++  //     errs() << "    ";
++  //   }
++  //   errs() << "\n";
++  // } 
++  // else if (dyn_cast<Constant>(operand)) {
++  //   errs() << "Constant\n";
++  // } 
++  // else {
++  //   errs() << "Unknown operand\n";
++  // }
++
++  CallInst *Call = IRB.CreateCall(accessCallback[isWrite][accessSizeArrayIndex], 
++                                  ArrayRef<Value*>(arguments));
++  errs() << "Generated function call:\n\t";
++  Call->print(errs());
++  errs() << "\n";
++
 +  // We don't do Call->setDoesNotReturn() because the BB already has
 +  // UnreachableInst at the end.
 +  // This noopAsm is required to avoid callback merge.
++
 +  IRB.CreateCall(noopAsm);
 +  return Call;
 +}
@@ -319,16 +359,15 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +}
 +
 +void Instrumenter::instrumentAddress(Instruction *origIns,
-+                                         IRBuilder<> &IRB, Value *addr,
-+                                         uint32_t typeSize, bool isWrite) {
++                                     IRBuilder<> &IRB, Value *addr,
++                                     uint32_t typeSize, bool isWrite, 
++                                     const StringRef &funcName, unsigned long instCounter) {
 +
 +  Value * actualAddr = IRB.CreatePointerCast(addr, intptrType);
 +  size_t accessSizeArrayIndex = TypeSizeToSizeIndex(typeSize);
-+//  errs() << "Type size:" << typeSize << ".Access size index:" << accessSizeArrayIndex << "\n";
 +
 +  // Insert the callback function here.
-+  insertAccessCallback(origIns, actualAddr, isWrite, accessSizeArrayIndex);
-+//  ins->dump();
++  insertAccessCallback(origIns, actualAddr, isWrite, accessSizeArrayIndex, funcName, instCounter);
 +}
 +
 +// Validate the result of Module::getOrInsertFunction called for an interface
@@ -343,14 +382,12 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +}
 +
 +bool Instrumenter::doFinalization(Module &M) {
++  for (std::map<int, StringRef>::iterator it = funcNames.begin(); it != funcNames.end(); it++)
++    errs() << it->first << " " << it->second << "\n";
 +  return false;
 +}
 +
 +bool isLocalVariable(Value * value) {
-+  errs() << "Value id:" << value->getValueID();
-+  if (value->hasName())
-+    errs() << "   Value name:" << value->getName();
-+  errs() << "\n";
 +  return value->getValueID() == 48; 
 +}
 +
@@ -366,19 +403,20 @@ diff -Nur llvm-3.2-source-orig/lib/Transforms/instrumenter/instrumenter.cpp llvm
 +  bool isWrite;
 +
 +  // Fill the set of memory operations to instrument.
++  unsigned long instCounter = 0;
 +  for (Function::iterator bb = F.begin(), FE = F.end();
 +       bb != FE; ++bb) {
 +    tempToInstrument.clear();
 +      
 +    int NumInsnsPerBB = 0;
 +    for (BasicBlock::iterator ins = bb->begin(), BE = bb->end();
-+         ins != BE; ++ins) {
++         ins != BE; ++ins, ++instCounter) {
 +      if (Value *addr = isInterestingMemoryAccess(ins, &isWrite)) {
 +        if(isLocalVariable(addr)) {
 +          continue;
 +        }
 +         
-+        instrementMemoryAccess(ins);
++        instrementMemoryAccess(ins, F.getName(), instCounter + 1);
 +#if 0
 +        if (!tempToInstrument.insert(addr)) {
 +          errs() << "Now discarding instruction because of already there:\n" ;
