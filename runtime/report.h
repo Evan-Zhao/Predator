@@ -44,10 +44,10 @@ public:
     assert(end != NULL);
     assert(cacheWrites != NULL);
 
-    fprintf(stderr, 
-      "report.initialize(isHeap=%s, start=%p, end=%p, cacheWrites=%p, cacheTrackings=%p)\n\n", 
-      (isHeap ? "true" : "false"), start, end, cacheWrites, cacheTrackings
-    );
+    // fprintf(stderr, 
+    //   "report.initialize(isHeap=%s, start=%p, end=%p, cacheWrites=%p, cacheTrackings=%p)\n\n", 
+    //   (isHeap ? "true" : "false"), start, end, cacheWrites, cacheTrackings
+    // );
 
     _isHeap = isHeap;
     _start = (char *)start;
@@ -272,9 +272,10 @@ public:
         }
 
         if(track->getInvalidations() > 0) {
+          #ifdef VERBOSE
           fprintf(stderr, "\t\tgetCacheInvalidations(): cache %lu: cacheWrites is %ld invalidations %ld at %p\n", 
                   i, _cacheWrites[i], track->getInvalidations(), track);
-           
+          #endif
           track->reportFalseSharing();
         }
         
@@ -346,8 +347,10 @@ public:
  
         // Whenever interleaved writes is larger than the specified threshold
         if(objectinfo.invalidations > xdefines::THRESHOLD_REPORT_INVALIDATIONS) {
+          #ifdef VERBOSE
           // Print current memory location.
           fprintf(stderr, "\treportHeapObjects(pos=%p, objectStart=0x%lx, objectEnd=0x%lx)\n", pos, objectStart, objectEnd); 
+          #endif
           // Save object information.
           memcpy((void *)&objectinfo.u.callsite, object->getCallsiteAddr(), sizeof(CallSite));
           reportFalseSharingObject(&objectinfo);
@@ -372,7 +375,9 @@ public:
     Elf_Ehdr *hdr = elf->hdr;
     Elf_Sym *symbol;
 
+    #ifdef VERBOSE
     fprintf(stderr, "\treport.reportGlobalObjects(); globalstart=0x%lx, globalend=0x%lx\n\n", globalStart, globalEnd);
+    #endif
     for (symbol = elf->symtab_start; symbol < elf->symtab_stop; symbol++) {
       if(symbol == NULL) {
         continue;
@@ -439,8 +444,8 @@ public:
     int words = object->unitlength/xdefines::WORD_SIZE;
     int size; 
 
-//    fprintf(stderr, "filename %s\n", _curFilename);
-    if(object->isHeapObject) { 
+    #ifdef VERBOSE
+    if(object->isHeapObject) {
       fprintf(stderr, "\t\tFALSE SHARING HEAP OBJECT: start %p end %p (with size %ld). Accesses %ld invalidations %ld writes %ld. Callsite stack:\n", object->start, object->stop, object->unitlength, object->totalAccesses, object->invalidations, object->totalWrites);
       for(int i = 0; i < CALL_SITE_DEPTH; i++) {
         if(object->u.callsite[i] != 0) {
@@ -453,34 +458,58 @@ public:
       fprintf(stderr, "\t\tFALSE SHARING GLOBAL VARIABLE: start %p end %p (with size %ld). Accesses %ld invalidations %ld writes %ld. \n", object->start, object->stop, object->unitlength, object->totalAccesses, object->invalidations, object->totalWrites);
       // Print object information about globals.
       Elf_Sym *symbol = (Elf_Sym *)object->u.symbol;
-//find_symbol(&_elfInfo, (intptr_t)object->start);
+
       if(symbol != NULL) {
         const char * symname = _elfInfo.strtab + symbol->st_name;
         fprintf(stderr, "\t\tGlobal object: name \"%s\", start 0x%lx, size %ld\n", symname, symbol->st_value, symbol->st_size);
       }
     }
-
-    #ifdef OUTPUT_WORD_ACCESSES
+    #endif
     size = object->unitlength;
     int * address = (int *)object->start;
     struct wordinfo * winfo = (struct wordinfo *) object->winfo;
     for(int i = 0; i < size/xdefines::WORD_SIZE; i++) {
       if((winfo[i].reads + winfo[i].writes) != 0) {
-        //fprintf(stderr, "\tWord %d: at address %p (line %d), reads %d writes %d ", i, address, winfo[i].reads, winfo[i].writes); 
-        fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %lu@%lu, ",
+        fprintf(stderr, "%p;%ld;%d/%d;%u@%u;",
                 address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes,
-                winfo[i].instId, winfo[i].funcId); 
-        if(winfo[i].tindex == cachetrack::WORD_THREAD_SHARED) {
-          fprintf(stderr, "by mulitple thread\n");
-        }
-        else {
-          fprintf(stderr, "by thread %d\n", winfo[i].tindex);
-        } 
+                winfo[i].instId, winfo[i].funcId);
+        fprintf(stderr, "[");
+        int needComma = 0;
+        for (int j = 0; j < wordinfo::MAX_THREAD; j++)
+          if (winfo[i].tindices_r & (1 << j)) {
+            if (needComma)
+              fprintf(stderr, ", ");
+            fprintf(stderr, "%d", j);
+            needComma = 1;
+          }
+        fprintf(stderr, "]/[");
+        needComma = 0;
+        for (int j = 0; j < wordinfo::MAX_THREAD; j++)
+          if (winfo[i].tindices_w & (1 << j)) {
+            if (needComma)
+              fprintf(stderr, ", ");
+            fprintf(stderr, "%d", j);
+            needComma = 1;
+          }
+        fprintf(stderr, "]\n");
+        //fprintf(stderr, "\tWord %d: at address %p (line %d), reads %d writes %d ", i, address, winfo[i].reads, winfo[i].writes); 
+        // fprintf(stderr, "\t\t\t%p (cache line %ld): r(%d)/w(%d); %u@%u, ",
+        //         address, getCachelineIndex((intptr_t)address), winfo[i].reads, winfo[i].writes,
+        //         winfo[i].instId, winfo[i].funcId);
+        // fprintf(stderr, "by thread(s) ");
+        // for (int j = 0; j < wordinfo::MAX_THREAD; j++)
+        //   if (winfo[i].tindices_bitmap & (1 << j))
+        //     fprintf(stderr, "%d, ", j);
+        // fprintf(stderr, "\n");
+        // if(winfo[i].tindex == cachetrack::WORD_THREAD_SHARED) {
+        //   fprintf(stderr, "by mulitple thread\n");
+        // }
+        // else {
+        //   fprintf(stderr, "by thread %d\n", winfo[i].tindex);
+        // } 
       }
       address++;
     }
-    #endif 
-    fprintf(stderr, "\n\n");
   }
 
 private:

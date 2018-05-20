@@ -57,11 +57,13 @@ using namespace std;
 
 extern "C" {
   struct wordinfo {
-    unsigned long funcId, instId;
+    const static int MAX_THREAD = 32;
+    unsigned int funcId, instId;
     int         unitsize;
     int         tindex;
     int         reads;
     int         writes;
+    int         tindices_r, tindices_w;
   };
 
   typedef enum E_Result_Handle_Access {
@@ -131,6 +133,10 @@ public:
   void recordWordAccess(int tindex, void * addr, int bytes, eAccessType type, 
                         unsigned long funcId, unsigned long instId) {
     int index = getCacheOffset((size_t)addr);
+    if (tindex >= wordinfo::MAX_THREAD) {
+        printf("Too many threads\n");
+        exit(1);
+    }
     if(tindex != _words[index].tindex) {
       if(_words[index].tindex == WORD_THREAD_INIT) {
         _words[index].tindex = tindex;
@@ -144,9 +150,11 @@ public:
     // Update corresponding counter for each word.
     if(type == E_ACCESS_WRITE) {
       _words[index].writes++;
+      _words[index].tindices_w |= (1 << tindex);
     }
     else {
       _words[index].reads++;
+      _words[index].tindices_r |= (1 << tindex);
     }
 
     _words[index].funcId = funcId;
@@ -192,7 +200,9 @@ public:
   /// Report false sharing
   void reportFalseSharing(void) {
     if(_thisCache.invalidations() > 0) {
+      #ifdef VERBOSE
       fprintf(stderr, "\t\t\tCacheStart 0x%lx Accesses %ld (at %p) Writes %ld invalidations %ld THREAD %d\n", _cacheStart, _accesses, &_accesses,  _writes, _thisCache.invalidations(), getThreadIndex());
+      #endif
       //fprintf(stderr, "\tCacheStart 0x%lx Accesses %lx (at %p) Writes %lx invalidations %ld THREAD %d\n", _cacheStart, _accesses, &_accesses,  _writes, _thisCache.invalidations(), getThreadIndex());
     }
     if(_hasPredicts) {

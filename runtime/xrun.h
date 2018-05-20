@@ -72,8 +72,10 @@ public:
 
   void finalize (void)
   {
+    #ifdef VERBOSE
     fprintf(stderr, "================================================\n");
     fprintf(stderr, "Finalizing, check the false sharing problem now.\n");
+    #endif
     // If the tid was set, it means that this instance was
     // initialized: end the transaction (at the end of main()).
     _memory.finalize();
