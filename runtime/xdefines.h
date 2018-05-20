@@ -176,13 +176,13 @@ public:
 
   // We start to track all accceses only when writes is larger than this threshold.
   // If not, then we only need to track writes. 
-  enum { THRESHOLD_TRACK_DETAILS = 10 };
+  enum { THRESHOLD_TRACK_DETAILS = 1 };
  
   // We should guarantee that sampling period should cover the prediction phase.
   enum { SAMPLE_ACCESSES_EACH_INTERVAL = THRESHOLD_TRACK_DETAILS};
   //enum { SAMPLE_INTERVAL = SAMPLE_ACCESSES_EACH_INTERVAL * 5 };
   //enum { SAMPLE_INTERVAL = SAMPLE_ACCESSES_EACH_INTERVAL * 100 };
-  enum { SAMPLE_INTERVAL = SAMPLE_ACCESSES_EACH_INTERVAL * 10 };
+  enum { SAMPLE_INTERVAL = SAMPLE_ACCESSES_EACH_INTERVAL * 1 };
 
   // Now we can start to check potential false sharing 
   enum { THRESHOLD_PREDICT_FALSE_SHARING = THRESHOLD_TRACK_DETAILS * 2 };
