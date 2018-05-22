@@ -776,7 +776,12 @@ private:
 #ifdef CENTRALIZED_BIG_HEAP
 	bigheap _bheap;
 #endif 
+  // _cacheWrites: an array of counters for # of write operation on each cache line.
+  // Start tracking this cache line only if # of write exceeds THRESHOLD_TRACK_DETAILS.
   unsigned long * _cacheWrites;
+  // _cacheTrackings: an array of pointers to cachetrack. 
+  // Upon # of write of a cache line hitting the threshold, the corresponding entry
+  // in _cacheTrackings will be allocated a cachetrack (by atomic_compare_and_swap).
   cachetrack ** _cacheTrackings;
   unsigned long _heapCacheIndex; 
 };
