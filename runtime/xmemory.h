@@ -723,7 +723,6 @@ public:
     cachetrack * track = NULL;
     eResultHandleAccess result = E_RHA_NONE;
     
-//    fprintf(stderr, "HandleAccess addr %lx bytes %d\n", addr, bytes);
     unsigned long * status = &_cacheWrites[index];
     unsigned long totalWrites = *status;
     if(totalWrites < xdefines::THRESHOLD_TRACK_DETAILS) {
@@ -733,8 +732,8 @@ public:
           size_t cachestart = getCacheStart((void *)addr);
           track = allocCacheTrack(cachestart, xdefines::THRESHOLD_TRACK_DETAILS);
           // Set to corresponding array.
-          atomic_compare_and_swap((unsigned long *)&_cacheTrackings[index], 0, (unsigned long)track);
-
+          while (!atomic_compare_and_swap((unsigned long *)&_cacheTrackings[index], 0, (unsigned long)track));
+          // fprintf(stderr, "Alloc'ed; addr = %p, totalWrites = %d, track = %p\n", addr, totalWrites, _cacheTrackings[index]);
           // Tracking adjacent cachelines for a heap object.
           trackAdjacentCachelines(index);
         }
@@ -756,7 +755,8 @@ public:
           evaluatePotentialFalsesharing((void *)addr, index);
         }
 #endif
-      } 
+      } else
+        fprintf(stderr, "WHAT??? in xmemory.h; addr = %lu, totalWrites = %lu\n", addr, totalWrites);
     }
   }
 
